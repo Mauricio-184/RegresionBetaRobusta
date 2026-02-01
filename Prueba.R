@@ -67,3 +67,4 @@ ggplot(data_Completa, aes(x = x, y = y)) +
   theme(plot.title = element_text(hjust = 0.5))
 coef(Modelo) 
 coef(Modelo_1)
+
