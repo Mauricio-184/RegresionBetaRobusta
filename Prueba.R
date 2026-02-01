@@ -1,56 +1,69 @@
-set.seed(123)
-# Datos base
-n <- 100
-x <- seq(-6, 6, length.out = n)
-p <- 1 / (1 + exp(-1 * (x - 0)))
-Y <- rbinom(n, size = 1, prob = p)
+install.packages("statmod")
+install.packages("numDeriv")
+library(numDeriv)
+library(statmod)
+library(betareg)
+library(ggplot2)
+set.seed(2026)
+n <- 20
+epsilon <- n*0.10
+x <- runif(n, 4, 250)
+beta0 <- 0.8
+beta1 <- -0.03
+eta <- beta0 + beta1 * x
+mu  <- exp(eta) / (1 + exp(eta))   
+phi <- 50                         
+y <- rbeta(length(x), mu * phi, (1 - mu) * phi)
+outliers_idx <- sample(1:n, epsilon)
+y_outliers <- y
+#y_outliers[outliers_idx[1:5]] <- 0.0001   
+y_outliers[outliers_idx[1:epsilon]] <- 0.99  
+x_outliers <- outliers_idx[1:epsilon]
+y_out <- y_outliers[outliers_idx[1:epsilon]]
+outliers <- data.frame(x_outliers,y_out)
+data <- data.frame(x = x, y = y)
+Modelo <- betareg(y ~ x, data = data, link = "logit")
+#outliers <- data.frame(
+#  x = c(45, 50),
+# y = c(0.85, 0.95)
+#)
 
-# Agregar outliers
-x_out <- 7; Y_out <- 0
-x_out1 <- 10; Y_out1 <- 0
-
-x2 <- c(x, x_out, x_out1)
-Y2 <- c(Y, Y_out, Y_out1)
-# Ajustar modelo logístico
-modelo_out <- glm(Y ~ x, family = binomial(link = "logit"))
-# Ajustar modelo logístico con outliers
-modelo_out1 <- glm(Y2 ~ x2, family = binomial(link = "logit"))
-
-# Predicciones
-pred_out <- predict(modelo_out, newdata = data.frame(x = sort(x)), type = "response")
-pred_out1 <- predict(modelo_out1, newdata = data.frame(x2 = sort(x2)), type = "response")
-
-# Graficar
-plot(x2, Y2, pch = 19, col = rgb(0, 0, 1, 0.5),
-     xlab = "x", ylab = "Probabilidad / Datos",
-     main = "Curva logística afectada por un outlier",
-     ylim = c(-0.1, 1.1))
-
-# Curva verdadera (verde)
-lines(x, p, col = "green", lwd = 2, lty = 2)
-# Curva ajustada  (orange)
-lines(sort(x), pred_out, col = "orange", lwd = 2)
-# Curva ajustada con el outlier (roja)
-lines(sort(x2), pred_out1, col = "red", lwd = 2)
-
-# Señalar los outliers
-points(x_out, Y_out, pch = 19, col = "red", cex = 2)
-points(x_out1, Y_out1, pch = 19, col = "red", cex = 2)
-
-# Leyenda fuera del gráfico
-
-xrange <- range(x2)
-yrange <- range(Y)
-
-legend(x = xrange[2] - diff(xrange)*0.4,   # 40% antes del borde derecho
-       y = yrange[2] - diff(yrange)*0.1,   # 10% bajo el borde superior
-       legend = c("Datos normales", "Curva verdadera", "Ajuste No afectado","Ajuste afectado", "Outlier"),
-       col = c(rgb(0, 0, 1, 0.5), "green", "orange","red", "red"),
-       pch = c(19, NA, NA, NA, 19),
-       lty = c(NA, 1, 1, 1, NA),
-       lwd = c(NA, 1, 1, 1, NA),
-       cex = 0.8,
-       bty = "n")
-
-
-
+data_Completa <- data.frame(x,y = y_outliers)
+Modelo_1 <- betareg(y ~ x, data = data_Completa, link = "logit")
+x_grid <- seq(min(data$x), max(data$x), length.out = n)
+data_Nueva <- data.frame(x = x_grid)
+prediciones_Modelo <- predict(Modelo,newdata =data_Nueva ,type = "response")
+prediciones_Modelo_1 <- predict(Modelo_1,newdata =data_Nueva,type = "response")
+pred_limpio_df <- data.frame(
+  x = x_grid,
+  y = prediciones_Modelo
+)
+Y_P <- pred_limpio_df$y
+pred_Completo_df <- data.frame(
+  x = x_grid,
+  y = prediciones_Modelo_1
+)
+Y_P_1 <- pred_Completo_df$y
+ggplot(data_Completa, aes(x = x, y = y)) +
+  geom_point(aes(color = "Datos limpios"))+
+  geom_line(data = pred_limpio_df,
+            aes(x = x, y = Y_P, color = "Ajuste limpio"),
+            linewidth = 1) +
+  geom_line(data =pred_Completo_df,
+            aes(x = x, y = Y_P_1, color = "Ajuste Completo"),
+            linewidth = 1) +
+  geom_point(data = outliers,
+             aes(x = x[x_outliers] , y =y_out , color = "Outliers"))+
+  scale_color_manual(
+    values = c(
+      "Datos limpios"  = "black","Ajuste limpio" = "blue",
+      "Ajuste Completo"="orange","Outliers"    = "red") 
+  )+
+  labs(
+    title = "Datos contaminados con valores atípicos",
+    y = "Proporciones",
+    color = "Leyenda"
+  )+
+  theme(plot.title = element_text(hjust = 0.5))
+coef(Modelo) 
+coef(Modelo_1)
