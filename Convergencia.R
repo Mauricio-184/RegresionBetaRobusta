@@ -1,7 +1,7 @@
 library(betareg)
 set.seed(2026)
 R <- 100
-n_vals <- c(30,100,500)
+n_vals <- c(10)
 beta0 <- 0.8
 beta1 <- -0.03
 phi <- 50
@@ -52,8 +52,8 @@ plot(3:max_n, rep(NA, max_n-2), type="n",
      ylim = range(unlist(Resultados_phi), phi),
      main="Convergencia de phi")
 for (k in 1:length(n_vals)) {
-  lines(3:n_vals[k], Resultados_beta1[[k]], col=colores[k], type="b")
+  lines(3:n_vals[k], Resultados_phi[[k]], col=colores[k], type="b")
 }
 abline(h = phi, col="red", lwd=2)
-main="Convergencia de beta0"
-main="Convergencia de beta1"
+
+
